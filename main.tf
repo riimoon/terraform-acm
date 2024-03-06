@@ -23,8 +23,10 @@ resource "aws_launch_template" "main-launch-template" {
   key_name      = var.key_pair
 
   network_interfaces {
-    device_index = 0
-    subnet_id    = var.subnet_id
+    associate_public_ip_address = true
+    device_index                = 0
+    security_groups             = [aws_security_group.sg.id]
+    subnet_id                   = var.subnet_id
   }
 
   user_data = filebase64("./user_data.sh")
@@ -97,7 +99,7 @@ resource "aws_lb_target_group" "main-tg" {
   vpc_id   = var.vpc_id
 
   health_check {
-    path                = "/index.html"
+    path                = "/"
     protocol            = "HTTP"
     interval            = 30
     timeout             = 5
@@ -158,7 +160,7 @@ resource "aws_lb_listener" "main-list-http" {
 
   default_action {
     type = "redirect"
-    
+
     redirect {
       port        = "443"
       protocol    = "HTTPS"
@@ -184,13 +186,6 @@ resource "aws_route53_record" "main-arecord" {
   }
 }
 
-# resource "aws_route53_record" "www-cname" {
-#   zone_id = var.zone_id # Put your hosted zone ID here
-#   name    = "www.${var.domain}"
-#   type    = "A"
-#   ttl     = "60"                       # You can adjust the TTL as needed
-#   records = [aws_lb.main-alb.dns_name] # Point 'www' subdomain to the ALB
-# }
 
 resource "aws_route53_record" "main-wwwrecord" {
   zone_id = var.zone_id # Put your hosted zone ID here
