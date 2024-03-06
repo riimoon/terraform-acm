@@ -26,8 +26,10 @@ resource "aws_launch_template" "main-launch-template" {
     device_index = 0
     subnet_id    = var.subnet_id
   }
-}
 
+  user_data = filebase64("./user_data.sh")
+
+}
 #Create AutoScaling
 resource "aws_autoscaling_group" "main-asg" {
   name = replace(local.name, "rtype", "asg")
@@ -134,16 +136,7 @@ resource "aws_lb" "main-alb" {
 }
 
 
-resource "aws_lb_listener" "main-list-http" {
-  load_balancer_arn = aws_lb.main-alb.id
-  port              = 80
-  protocol          = "HTTP"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.main-tg.arn
-  }
-}
 
 resource "aws_lb_listener" "main-list-https" {
   load_balancer_arn = aws_lb.main-alb.id
@@ -158,6 +151,22 @@ resource "aws_lb_listener" "main-list-https" {
   }
 }
 
+resource "aws_lb_listener" "main-list-http" {
+  load_balancer_arn = aws_lb.main-alb.id
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
 resource "aws_lb_listener_certificate" "client-app_tls_certificate" {
   listener_arn    = aws_lb_listener.main-list-https.arn
   certificate_arn = aws_acm_certificate.main-acm.arn
@@ -169,8 +178,27 @@ resource "aws_route53_record" "main-arecord" {
   name    = var.domain
   type    = "A"
   alias {
-    name                   = aws_lb.main-alb.dns_name
-    zone_id                = var.zone_id # Put your ALB zone ID here
+    name                   = aws_lb.main-alb.dns_name #aws_lb" "main-alb
+    zone_id                = aws_lb.main-alb.zone_id  # Put your ALB zone ID here aws_alb.main.zone_id  "aws_lb_target_group" "main-tg"
+    evaluate_target_health = true
+  }
+}
+
+# resource "aws_route53_record" "www-cname" {
+#   zone_id = var.zone_id # Put your hosted zone ID here
+#   name    = "www.${var.domain}"
+#   type    = "A"
+#   ttl     = "60"                       # You can adjust the TTL as needed
+#   records = [aws_lb.main-alb.dns_name] # Point 'www' subdomain to the ALB
+# }
+
+resource "aws_route53_record" "main-wwwrecord" {
+  zone_id = var.zone_id # Put your hosted zone ID here
+  name    = "www.${var.domain}"
+  type    = "A"
+  alias {
+    name                   = aws_lb.main-alb.dns_name #aws_lb" "main-alb
+    zone_id                = aws_lb.main-alb.zone_id  # Put your ALB zone ID here aws_alb.main.zone_id  "aws_lb_target_group" "main-tg"
     evaluate_target_health = true
   }
 }

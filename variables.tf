@@ -111,11 +111,3 @@ variable "list_subnets" {
   type    = list(string)
   default = ["subnet-0ff765291184219f4", "subnet-0218fcaf5267da632"]
 }
-
-variable "aws_access_key" {
-  default = "put_your_aws_access_key"
-}
-
-variable "aws_secret_key" {
-  default = "put_your_aws_secret_key"
-}
